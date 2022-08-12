@@ -25,8 +25,9 @@ func handleScrape(c echo.Context) error {
 }
 
 func main() {
-	e := echo.New()
-	e.GET("/",handleHome)
-	e.POST("/scrape",handleScrape)
-	e.Logger.Fatal(e.Start(":1323"))
+	// e := echo.New()
+	// e.GET("/",handleHome)
+	// e.POST("/scrape",handleScrape)
+	// e.Logger.Fatal(e.Start(":1323"))
+	scrapper.Scrape("106000", "16")
 }

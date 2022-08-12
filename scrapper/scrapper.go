@@ -20,11 +20,10 @@ type extractedJob struct {
 	grade string
 }
 
-
 // term1 = industry_id >> service == 100
 // term2 = city_id >> busan == 4
 func Scrape(term1 , term2 string) {
-	var baseURL string = "https://www.jobplanet.co.kr/companies?industry_id=" +term1 + "&city_id=" + term2
+	var baseURL string = "https://www.saramin.co.kr/zf_user/jobs/list/domestic?loc_mcd="+ term1 + "&cat_mcls=" + term2
 	var jobs []extractedJob
 	c := make(chan []extractedJob)
 	totalPages := getPages(baseURL)
@@ -48,13 +47,13 @@ func writeJobs(jobs []extractedJob) {
 	w := csv.NewWriter(file)
 	defer w.Flush()
 
-	headers := []string{"ID", "Title", "Review", "Salary", "Grade"}
+	headers := []string{"근무지", "회사명", "모집내용", "모집부분", "지원자격"}
 
 	wErr := w.Write(headers)
 	checkErr(wErr)
 
 	for _, job := range jobs {
-		jobSlice := []string{"https://www.jobplanet.co.kr/companies/"+ job.id, job.title, job.review, job.salary, job.grade}
+		jobSlice := []string{job.id, job.title, job.review, job.salary, job.grade}
 		jwErr := w.Write(jobSlice)
 		checkErr(jwErr)
 	}
@@ -62,7 +61,7 @@ func writeJobs(jobs []extractedJob) {
 
 
 func CleanString(str string) string{
-	return strings.Join(strings.Fields(strings.TrimSpace(str)), "") 
+	return strings.Join(strings.Fields(strings.TrimSpace(str)), " ") 
 }
 
 func getPage(page int, url string, mainC chan<- []extractedJob){
@@ -79,7 +78,7 @@ func getPage(page int, url string, mainC chan<- []extractedJob){
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	checkErr(err)
 
-	searchCards := doc.Find(".content_wrap")
+	searchCards := doc.Find(".list_item")
 	searchCards.Each(func(i int, s *goquery.Selection) {
 		go extractJob(s, c)
 	})
@@ -91,12 +90,12 @@ func getPage(page int, url string, mainC chan<- []extractedJob){
 }
 
 func extractJob(s *goquery.Selection, c chan<- extractedJob){
-	btnId := s.Find(".btn_heart1")
-	id, _ := btnId.Attr("data-company_id")
-	title := CleanString(s.Find(".us_titb_l3>a").Text())
-	review :=CleanString(s.Find(".content_col2_4>dt").Text())
-	salary := CleanString(s.Find(".content_col2_4>dd>.us_stxt_1").Text())
-	grade := s.Find(".content_col2_4>dd>.gfvalue").Text()
+	id := s.Find(".work_place").Text()
+	// id, _ := btnId.Attr("data-company_id")
+	title := CleanString(s.Find(".company_nm>a>span").Text())
+	review :=CleanString(s.Find(".job_tit>a>span").Text())
+	salary := CleanString(s.Find(".job_meta>span").Text())
+	grade := s.Find(".career").Text()
 	c<- extractedJob{
 		id: id, 
 		title:title,
@@ -109,6 +108,7 @@ func extractJob(s *goquery.Selection, c chan<- extractedJob){
 func getPages(url string) int {
 	pages := 0
 	res, err := http.Get(url)
+	fmt.Println(url)
 	checkErr(err)
 	checkCode(res)
 
@@ -116,9 +116,11 @@ func getPages(url string) int {
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	checkErr(err)
-	doc.Find(".paginnation_new").Each(func(i int,s *goquery.Selection){
+	doc.Find(".pagination").Each(func(i int,s *goquery.Selection){
+		fmt.Println(doc)
 		pages = s.Find("a").Length()
 	})
+	fmt.Println(pages)
 	return pages
 }
 
